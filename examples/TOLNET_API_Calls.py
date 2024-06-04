@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 Created on Tue Nov 28 13:32:30 2023
 
@@ -57,8 +57,17 @@ class filter_files:
         return self
     
     def processing_type(self, processing_type: list = None, **kwargs) -> pd.DataFrame:
+        processing_type_names = []
+        
+        # id 1 = centrally proccessed, id 2 = in-house, id 3 = unprocessed
+        types = tolnet.processing_types
+        for process in processing_type:
+            processing_type_names.append(
+                types["processing_type_name"][types["id"] == process][0])
+        
+        
         try:
-            self.df = self.df[self.df["processing_type_name"].isin(processing_type)]
+            self.df = self.df[self.df["processing_type_name"].isin(processing_type_names)]
         except:
             pass
         return self
@@ -123,13 +132,13 @@ class TOLNet:
 
         i = 1
         url = f"https://tolnet.larc.nasa.gov/api/data/1?min_date={min_date}&max_date={max_date}&order=data_date&order_direction=desc"
-        response = requests.get(url).status_code
+        response = requests.get(url)
         data_frames = []
-        while response == 200:
-            data_frames.append(pd.DataFrame(requests.get(url).json()))
+        while response.status_code == 200:
+            data_frames.append(pd.DataFrame(response.json()))
             i += 1
             url = f"https://tolnet.larc.nasa.gov/api/data/{i}?min_date={min_date}&max_date={max_date}&order=data_date&order_direction=desc"
-            response = requests.get(url).status_code
+            response = requests.get(url)
 
         df = pd.concat(data_frames, ignore_index=True)
         df["start_data_date"] = pd.to_datetime(df["start_data_date"])
@@ -201,7 +210,7 @@ class TOLNet:
             return file_name, meta_data, data
         
         self.files = self.get_files_list(min_date, max_date)
-        file_info = filter_files(self.files).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).df
+        file_info = filter_files(self.files).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).processing_type(**kwargs).df
     
         if file_info.size == self.files.size:
             prompt = input("You are about to download ALL TOLNet JSON files available... Would you like to proceed? (yes | no)")
@@ -377,121 +386,3 @@ if __name__ == "__main__":
 """ Notes
 - Need Method for selecting processing_types
 """
-
-#%% Testbed
-
-import pickle as pkl
-
-with open("tolnet_data.pkl", "wb") as f:
-    pkl.dump(data, f)
-    
-    
-#%% 
-# 
-# import pickle as pkl
-
-# with open("tolnet_data.pkl", "rb") as f:
-#     tolnet = pkl.load(f)
-    
-#%% 
-
-
-# profiles = {}
-# for file in tolnet.meta_data.keys():
-#     profiles[file] = tolnet.data[file].to_dict("index")
-
-# #%% 
-
-# timestamp_dict = {}
-
-# for file in profiles.keys():
-#     for timestamp in profiles[file].keys():
-        
-#         if timestamp not in timestamp_dict:
-#             timestamp_dict[timestamp] = []
-        
-#         df = pd.DataFrame({"ozone": profiles[file][timestamp].values(), 
-#                            "altitude": profiles[file][timestamp].keys(), 
-#                            "latitude": np.repeat(tolnet.meta_data[file]["LATITUDE.INSTRUMENT"], len(profiles[file][timestamp].keys())),
-#                            "longitutde": np.repeat(tolnet.meta_data[file]["LONGITUDE.INSTRUMENT"], len(profiles[file][timestamp].keys())), 
-#                            }
-#                           )
-#         df["normalized_values"] = (df["ozone"] / 600)
-#         colormap, norm = tolnet.O3_curtain_colors()
-#         df["rgba"] = df['normalized_values'].apply(lambda x: colormap(norm(x)))
-
-#         # Step 5: Convert RGBA to RGB and store in a new column
-#         df['rgb'] = df['rgba'].apply(lambda x: mpl.colors.to_rgb(x))
-#         df['timestamp'] = timestamp
-#         df['hour'] = 
-        
-#         timestamp_dict[timestamp].append(df)
-
-# all_dfs = []
-# for timestamp in timestamp_dict.keys():
-#     timestamp_df = pd.concat(timestamp_dict[timestamp])
-#     all_dfs.append(timestamp_df)
-
-# final_df = pd.concat(all_dfs)
-
-# final_df.set_index(['timestamp', 'file'], inplace=True)
-# final_df.to_parquet('data.parquet')
-
-#%% 
-
-
-# import pandas as pd
-# import numpy as np
-# import matplotlib as mpl
-
-# # Assuming tolnet and other necessary imports are already available
-
-# profiles = {}
-# for file in tolnet.meta_data.keys():
-#     profiles[file] = tolnet.data[file].to_dict("index")
-
-# timestamp_dict = {}
-
-# for file in profiles.keys():
-#     for timestamp in profiles[file].keys():
-        
-#         if timestamp not in timestamp_dict:
-#             timestamp_dict[timestamp] = []
-        
-#         df = pd.DataFrame({
-#             "ozone": profiles[file][timestamp].values(), 
-#             "altitude": profiles[file][timestamp].keys(), 
-#             "latitude": np.repeat(tolnet.meta_data[file]["LATITUDE.INSTRUMENT"], len(profiles[file][timestamp].keys())),
-#             "longitude": np.repeat(tolnet.meta_data[file]["LONGITUDE.INSTRUMENT"], len(profiles[file][timestamp].keys())), 
-#         })
-#         df["normalized_values"] = df["ozone"] / 600
-#         colormap, norm = tolnet.O3_curtain_colors()
-#         df["rgba"] = df['normalized_values'].apply(lambda x: colormap(norm(x)))
-
-#         # Step 5: Convert RGBA to RGB and store in a new column
-#         df['rgb'] = df['rgba'].apply(lambda x: mpl.colors.to_rgb(x))
-#         df['timestamp'] = timestamp
-#         df['hour_of_day'] = pd.to_datetime(timestamp).hour
-        
-#         timestamp_dict[timestamp].append(df)
-
-# all_dfs = []
-# for timestamp in timestamp_dict.keys():
-#     timestamp_df = pd.concat(timestamp_dict[timestamp])
-#     all_dfs.append(timestamp_df)
-
-# final_df = pd.concat(all_dfs)
-
-# # Set the multi-level index
-# # final_df.set_index(['timestamp'], inplace=True)
-
-# # Save to Parquet file
-# final_df.to_parquet('data.parquet')
-
-
-#%% 
-
-
-# test_df = test.loc[('2023-07-04 20:00:00+00:00')]
-
-#%%
