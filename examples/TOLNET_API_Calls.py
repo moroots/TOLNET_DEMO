@@ -63,7 +63,7 @@ class filter_files:
         types = tolnet.processing_types
         for process in processing_type:
             processing_type_names.append(
-                types["processing_type_name"][types["id"] == process][0])
+                list(types["processing_type_name"][types["id"] == process])[0])
         
         
         try:
@@ -378,7 +378,6 @@ if __name__ == "__main__":
     # data = tolnet.import_data_json(min_date="2023-07-01", max_date="2023-08-31", product_type=[4])
     data = tolnet._import_data_json(min_date="2023-07-01", max_date="2023-08-31", 
                                     product_type=[4], 
-                                    processing_type=[1])
 
     # test = tolnet.get_files_list(min_date="2023-07-01", max_date="2023-08-31") 
 #%% Notes
