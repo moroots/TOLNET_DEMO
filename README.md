@@ -6,9 +6,9 @@
 - Advisor: John T. Sullivan
 
 ### To-Do List
-- [ ] Please make the following print a nicely showing the id associate with the names
-- [ ] Please investigate the issue with tolnet_curtains(): and create an example of this functionality working correcly
-- [ ] Please continue to adjust the processing_types filter to work properly
+- [ ] Make the following print a nicely showing the id associate with the names
+- [ ] Investigate the issue with tolnet_curtains(): and create an example of this functionality working correcly
+- [ ] Continue to adjust the processing_types filter to work properly
 
 
 #### Organization
