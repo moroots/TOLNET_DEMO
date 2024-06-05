@@ -6,7 +6,7 @@
 - Advisor: John T. Sullivan
 
 ### To-Do List
-- [ ] Please make the following print a nicely showing the id associate with the names:
+- [ ] Please make the following print a nicely showing the id associate with the names
 
       ```ruby
       self.products = self.get_product_types()
