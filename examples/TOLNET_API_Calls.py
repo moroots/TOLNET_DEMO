@@ -57,9 +57,12 @@ class filter_files:
         return self
     
     def processing_type(self, processing_type: list = None, **kwargs) -> pd.DataFrame:
+        """
+        id 1 = centrally proccessed
+        id 2 = in-house 
+        id 3 = unprocessed
+        """
         processing_type_names = []
-        
-        # id 1 = centrally proccessed, id 2 = in-house, id 3 = unprocessed
         types = tolnet.processing_types
         for process in processing_type:
             processing_type_names.append(
@@ -84,19 +87,19 @@ class TOLNet:
 
     @staticmethod
     def get_product_types():
-        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/product_types").json())
+        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/product_types").json()).sort_values(by=["id"])
 
     @staticmethod
     def get_file_types():
-        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/file_types").json())
+        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/file_types").json()).sort_values(by=["id"])
 
     @staticmethod
     def get_instrument_groups():
-        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/instruments/groups").json())
+        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/instruments/groups").json()).sort_values(by=["id"])
     
     @staticmethod
     def get_processing_types():
-        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/processing_types").json())
+        return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/processing_types").json()).sort_values(by=["id"])
 
     @staticmethod
     def get_files_list(min_date, max_date):
@@ -376,12 +379,18 @@ if __name__ == "__main__":
     print("Grabbed Processing Types")
     
     # data = tolnet.import_data_json(min_date="2023-07-01", max_date="2023-08-31", product_type=[4])
-    data = tolnet._import_data_json(min_date="2023-07-01", max_date="2023-08-31", 
-                                    product_type=[4], 
-
+    data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
+                                    product_type=[4]).tolnet_curtains() 
+    
     # test = tolnet.get_files_list(min_date="2023-07-01", max_date="2023-08-31") 
 #%% Notes
 
-""" Notes
-- Need Method for selecting processing_types
+""" Tasks For Arthus
+- Please make the following print a nicely showing the id associate with the names:
+        self.products = self.get_product_types()
+        self.file_types = self.get_file_types()
+        self.instrument_groups = self.get_instrument_groups()
+        self.processing_types = self.get_processing_types()
+- Please investigate the issue with tolnet_curtains(): and create an example of this functionality working correcly
+- Please continue to adjust the processing_types filter to work properly
 """
