@@ -310,6 +310,7 @@ class TOLNet:
         ncmap, nnorm = self.O3_curtain_colors()
 
         for name in self.data.keys():
+            self.data[name] = self.data[name].fillna(value=np.nan)
             X, Y, Z = (self.data[name].index, self.data[name].columns, self.data[name].to_numpy().T,)
             im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
 
@@ -403,7 +404,7 @@ if __name__ == "__main__":
     #                                product_type=[4]).tolnet_curtains()
     print(f"Retrieving all HIRES files from {date_start} to {date_end} that were centrally processed:")
     data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4], processing_type=[1])
-    
+    data.tolnet_curtains()
     
     
     # test = tolnet.get_files_list(min_date="2023-07-01", max_date="2023-08-31") 
