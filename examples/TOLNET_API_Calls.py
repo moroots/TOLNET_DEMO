@@ -62,14 +62,17 @@ class filter_files:
         id 2 = in-house 
         id 3 = unprocessed
         """
-        processing_type_names = []
-        types = tolnet.processing_types
-        for process in processing_type:
-            processing_type_names.append(
-                list(types["processing_type_name"][types["id"] == process])[0])
+        
+        
         
         
         try:
+            processing_type_names = []
+            types = tolnet.processing_types
+            for process in processing_type:
+                processing_type_names.append(
+                    list(types["processing_type_name"][types["id"] == process])[0])
+                    
             self.df = self.df[self.df["processing_type_name"].isin(processing_type_names)]
         except:
             pass
@@ -365,22 +368,43 @@ class TOLNet:
 
 
 #%% Example
+date_start = "2023-08-08"
+date_end = "2023-08-11"
+
 
 if __name__ == "__main__":
     tolnet = TOLNet()
     print("Created TOLNET intance")
-    tolnet.products
-    print("Grabbed Product List")
-    tolnet.file_types
-    print("Grabbed File Types")
-    tolnet.instrument_groups
-    print("Grabbed Instrument Groups")
-    tolnet.processing_types
-    print("Grabbed Processing Types")
+    
+    print("TOLNET product IDs:")
+    print(tolnet.products[["id", "product_type_name"]].to_string(index=False))
+    # print("Grabbed Product List")
+    
+    
+    print("File Types:")
+    print(tolnet.file_types[["id", "file_type_name"]].to_string(index=False))
+    
+    # print("Grabbed File Types")
+    #tolnet.instrument_groups
+    
+    print("Instrument Groups:")
+    print(tolnet.instrument_groups[["id", "instrument_group_name"]].to_string(index=False))
+    
+    #print("Grabbed Instrument Groups")
+    
+    print("Processing Types:")
+    print(tolnet.processing_types[["id", "processing_type_name"]].to_string(index=False))
+    
+    #tolnet.processing_types
+    #print("Grabbed Processing Types")
     
     # data = tolnet.import_data_json(min_date="2023-07-01", max_date="2023-08-31", product_type=[4])
-    data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
-                                    product_type=[4]).tolnet_curtains() 
+    # data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
+    #                                product_type=[4]).tolnet_curtains()
+    print(f"Retrieving all HIRES files from {date_start} to {date_end} that were centrally processed:")
+    data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4], processing_type=[1])
+    
+    
     
     # test = tolnet.get_files_list(min_date="2023-07-01", max_date="2023-08-31") 
 #%% Notes
