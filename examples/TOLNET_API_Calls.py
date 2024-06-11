@@ -87,7 +87,27 @@ class TOLNet:
         self.processing_types = self.get_processing_types()
         # self.files = self.get_files_list()
         return
+    
+    def products(self): 
+        print("TOLNET product IDs:")
+        print(self.products[["id", "product_type_name"]].to_string(index=False))
+        return 
+    
+    
+    def file_types(self):
+        print("File Types:")
+        print(self.file_types[["id", "file_type_name"]].to_string(index=False))
 
+    def insturment_groups(self):
+        print("Instrument Groups:")
+        print(self.instrument_groups[["id", "instrument_group_name"]].to_string(index=False))
+        return
+        
+    def processing_types(self):
+        print("Processing Types:")
+        print(self.processing_types[["id", "processing_type_name"]].to_string(index=False))
+        return
+    
     @staticmethod
     def get_product_types():
         return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/product_types").json()).sort_values(by=["id"])
@@ -225,7 +245,8 @@ class TOLNet:
     
         self.data = {}
         self.meta_data = {}
-    
+        
+        
         # Use ThreadPoolExecutor for multithreading
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_to_file = {
@@ -239,6 +260,7 @@ class TOLNet:
                     file_name, meta_data, data = future.result()
                     self.meta_data[file_name] = meta_data
                     self.data[file_name] = data
+
                 except Exception as e:
                     print(f"Error processing file {file_name}: {e}")
     
@@ -305,60 +327,80 @@ class TOLNet:
         None.
 
         """
-        fig = plt.figure(figsize=(15, 8))
-        ax = plt.subplot(111)
+        
+        inst_grp_names = self.instrument_groups["instrument_group_name"].to_list()
+        
+        group_names = []
+        
+        for name in self.meta_data.keys():
+            group_name = self.meta_data[name]["fileInfo"]["instrument_group_name"]
+            if group_name not in group_names:
+                group_names.append(group_name)
+            
+        
+        # if meta_data["fileInfo"]["insturment_group_name"] not in inst_grp_names:
+        #     self.data["instrument_groups"].append(meta_data["fileInfo"]["insturment_group_name"])
+                        
+                        
+        # fig = plt.figure(figsize=(15, 8))
+        fig, ax = plt.subplot_mosaic([[x] for x in group_names], 
+                                     figsize=(15, 25), 
+                                     layout="tight")
+        
         ncmap, nnorm = self.O3_curtain_colors()
 
         for name in self.data.keys():
             self.data[name] = self.data[name].fillna(value=np.nan)
             X, Y, Z = (self.data[name].index, self.data[name].columns, self.data[name].to_numpy().T,)
-            im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
+            gn = self.meta_data[name]["fileInfo"]["instrument_group_name"]
+            im = ax[gn].pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
+            
+        for gn in group_names:
+            cbar = fig.colorbar(im, ax=ax[gn], pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
+            cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
+    
+            # if "title" in kwargs.keys():
+            #     plt.title(kwargs["title"], fontsize=18)
+            # else: plt.title(r"$O_3$ Mixing Ratio Profile ($ppb_v$)", fontsize=20)
+    
+            if "ylabel" in kwargs.keys():
+                ax[gn].set_ylabel(kwargs["ylabel"], fontsize=18)
+            else: ax[gn].set_ylabel("Altitude (km AGL)", fontsize=18)
+    
+            if "xlabel" in kwargs.keys():
+                ax[gn].set_xlabel(kwargs["xlabel"], fontsize=20)
+            else: ax[gn].set_xlabel("Datetime (UTC)", fontsize=18)
+    
+            if "xlims" in kwargs.keys():
+                lim = kwargs["xlims"]
+                lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
+                ax[gn].set_xlim(lims)
+    
+            if "ylims" in kwargs.keys():
+                ax[gn].set_ylim(kwargs["ylims"])
+    
+            if "yticks" in kwargs.keys():
+                ax[gn].set_yticks(kwargs["yticks"], fontsize=20)
+    
+            # if "surface" in kwargs.keys():
+            #     X, Y, C = kwargs["surface"]
+            #     ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
+    
+            # if "sonde" in kwargs.keys():
+            #     X, Y, C = kwargs["sonde"]
+            #     ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
+    
+            converter = mdates.ConciseDateConverter()
+            munits.registry[datetime.datetime] = converter
+    
+            ax[gn].xaxis_date(timezone)
+    
+            # fonts
+            plt.setp(ax[gn].get_xticklabels(), fontsize=16)
+            plt.setp(ax[gn].get_yticklabels(), fontsize=16)
+            cbar.ax.tick_params(labelsize=16)
 
-        cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
-        cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
-
-        if "title" in kwargs.keys():
-            plt.title(kwargs["title"], fontsize=18)
-        else: plt.title(r"$O_3$ Mixing Ratio Profile ($ppb_v$)", fontsize=20)
-
-        if "ylabel" in kwargs.keys():
-            ax.set_ylabel(kwargs["ylabel"], fontsize=18)
-        else: ax.set_ylabel("Altitude (km AGL)", fontsize=18)
-
-        if "xlabel" in kwargs.keys():
-            ax.set_xlabel(kwargs["xlabel"], fontsize=20)
-        else: ax.set_xlabel("Datetime (UTC)", fontsize=18)
-
-        if "xlims" in kwargs.keys():
-            lim = kwargs["xlims"]
-            lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-            ax.set_xlim(lims)
-
-        if "ylims" in kwargs.keys():
-            ax.set_ylim(kwargs["ylims"])
-
-        if "yticks" in kwargs.keys():
-            ax.set_yticks(kwargs["yticks"], fontsize=20)
-
-        if "surface" in kwargs.keys():
-            X, Y, C = kwargs["surface"]
-            ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
-
-        if "sonde" in kwargs.keys():
-            X, Y, C = kwargs["sonde"]
-            ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
-
-        converter = mdates.ConciseDateConverter()
-        munits.registry[datetime.datetime] = converter
-
-        ax.xaxis_date(timezone)
-
-        # fonts
-        plt.setp(ax.get_xticklabels(), fontsize=16)
-        plt.setp(ax.get_yticklabels(), fontsize=16)
-        cbar.ax.tick_params(labelsize=16)
-
-        plt.tight_layout()
+        # plt.tight_layout()
 
         if "savefig" in kwargs.keys():
             plt.savefig(f"{kwargs['savefig']}", dpi=600)
@@ -377,28 +419,6 @@ if __name__ == "__main__":
     tolnet = TOLNet()
     print("Created TOLNET intance")
     
-    print("TOLNET product IDs:")
-    print(tolnet.products[["id", "product_type_name"]].to_string(index=False))
-    # print("Grabbed Product List")
-    
-    
-    print("File Types:")
-    print(tolnet.file_types[["id", "file_type_name"]].to_string(index=False))
-    
-    # print("Grabbed File Types")
-    #tolnet.instrument_groups
-    
-    print("Instrument Groups:")
-    print(tolnet.instrument_groups[["id", "instrument_group_name"]].to_string(index=False))
-    
-    #print("Grabbed Instrument Groups")
-    
-    print("Processing Types:")
-    print(tolnet.processing_types[["id", "processing_type_name"]].to_string(index=False))
-    
-    #tolnet.processing_types
-    #print("Grabbed Processing Types")
-    
     # data = tolnet.import_data_json(min_date="2023-07-01", max_date="2023-08-31", product_type=[4])
     # data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
     #                                product_type=[4]).tolnet_curtains()
@@ -411,11 +431,6 @@ if __name__ == "__main__":
 #%% Notes
 
 """ Tasks For Arthus
-- Please make the following print a nicely showing the id associate with the names:
-        self.products = self.get_product_types()
-        self.file_types = self.get_file_types()
-        self.instrument_groups = self.get_instrument_groups()
-        self.processing_types = self.get_processing_types()
-- Please investigate the issue with tolnet_curtains(): and create an example of this functionality working correcly
-- Please continue to adjust the processing_types filter to work properly
+
+
 """

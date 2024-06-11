@@ -57,3 +57,64 @@ im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
 
 plt.show()
 """
+
+#%% Maurice Roots
+
+test = "https://fluid.nccs.nasa.gov/cfapi/aqc/fcast/o3/45.5x9.2/20200416/"
+
+
+
+
+
+
+met_url = f'{base_url}/{collection}/{dataset}/{molecule}/{lat}x{lon}/{start_date}'
+
+class GEOS_CF():
+    
+    def __initi__(self):
+        self.base_url = "https://fluid.nccs.nasa.gov/cfapi/"
+        self.schema = requests.get(self.base_url).json()
+        return
+    
+    def _get_dat(molecule, lat, lon, start_date, collection="fcast"):
+        
+        return requests.get(url_query).json()
+        
+    
+    
+        #%% 
+import requests
+import numpy as np
+from tqdm import tqdm
+
+
+start_date = np.datetime64("2024-06-11")
+# end_date = start_date - np.timedelta64(1,"Y")
+
+valid = {}
+
+def _api_test(url):
+    return requests.get(url)
+                    
+# tqdm(as_completed(future_to_file), total=len(future_to_file)):
+for i in tqdm(np.arange(0, 65)):
+    date = str(start_date - np.timedelta64(i, "D")).replace("-", "")
+    url = f"https://fluid.nccs.nasa.gov/cfapi/fcast/chm_p23/O3/39.0x-77.0/{date}"
+    response = _api_test(url)
+    if response.status_code == 200:
+        if response.text == 'No data is available for this date.':
+            valid[date] = False
+        else:
+            valid[date] = True
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
