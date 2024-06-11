@@ -403,7 +403,7 @@ if __name__ == "__main__":
     # data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
     #                                product_type=[4]).tolnet_curtains()
     print(f"Retrieving all HIRES files from {date_start} to {date_end} that were centrally processed:")
-    data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4], processing_type=[1])
+    data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4])
     data.tolnet_curtains()
     
     
