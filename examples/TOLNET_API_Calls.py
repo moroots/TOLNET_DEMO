@@ -258,8 +258,16 @@ class TOLNet:
                 file_name = future_to_file[future]
                 try:
                     file_name, meta_data, data = future.result()
-                    self.meta_data[file_name] = meta_data
-                    self.data[file_name] = data
+                    
+                    key = (meta_data["fileInfo"]["instrument_group_name"], 
+                           meta_data["fileInfo"]["processing_type_name"])
+                    
+                    if key not in self.data.keys() or self.meta_data.keys(): 
+                        self.data[key] = {}
+                        self.meta_data[key] = {}
+                        
+                    self.data[key][file_name] = data
+                    self.meta_data[key][file_name] = meta_data
 
                 except Exception as e:
                     print(f"Error processing file {file_name}: {e}")
@@ -342,10 +350,11 @@ class TOLNet:
         #     self.data["instrument_groups"].append(meta_data["fileInfo"]["insturment_group_name"])
                         
                         
-        # fig = plt.figure(figsize=(15, 8))
-        fig, ax = plt.subplot_mosaic([[x] for x in group_names], 
-                                     figsize=(15, 25), 
-                                     layout="tight")
+        fig = plt.figure(figsize=(15, 8))
+        ax = plt.subplots(layout="tight")
+        # fig, ax = plt.subplot_mosaic([[x] for x in group_names], 
+        #                              figsize=(15, 25), 
+        #                              layout="tight")
         
         ncmap, nnorm = self.O3_curtain_colors()
 
@@ -354,8 +363,7 @@ class TOLNet:
             X, Y, Z = (self.data[name].index, self.data[name].columns, self.data[name].to_numpy().T,)
             gn = self.meta_data[name]["fileInfo"]["instrument_group_name"]
             im = ax[gn].pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
-            
-        for gn in group_names:
+
             cbar = fig.colorbar(im, ax=ax[gn], pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
             cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
     
@@ -382,13 +390,13 @@ class TOLNet:
             if "yticks" in kwargs.keys():
                 ax[gn].set_yticks(kwargs["yticks"], fontsize=20)
     
-            # if "surface" in kwargs.keys():
-            #     X, Y, C = kwargs["surface"]
-            #     ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
+            if "surface" in kwargs.keys():
+                X, Y, C = kwargs["surface"]
+                ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
     
-            # if "sonde" in kwargs.keys():
-            #     X, Y, C = kwargs["sonde"]
-            #     ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
+            if "sonde" in kwargs.keys():
+                X, Y, C = kwargs["sonde"]
+                ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
     
             converter = mdates.ConciseDateConverter()
             munits.registry[datetime.datetime] = converter
@@ -424,7 +432,7 @@ if __name__ == "__main__":
     #                                product_type=[4]).tolnet_curtains()
     print(f"Retrieving all HIRES files from {date_start} to {date_end} that were centrally processed:")
     data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4])
-    data.tolnet_curtains()
+    # data.tolnet_curtains()
     
     
     # test = tolnet.get_files_list(min_date="2023-07-01", max_date="2023-08-31") 
