@@ -248,7 +248,7 @@ class TOLNet:
         
         
         # Use ThreadPoolExecutor for multithreading
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             future_to_file = {
                 executor.submit(process_file, file_name, file_id): file_name
                 for file_name, file_id in zip(file_info["file_name"], file_info["id"])
@@ -262,7 +262,7 @@ class TOLNet:
                     key = (meta_data["fileInfo"]["instrument_group_name"], 
                            meta_data["fileInfo"]["processing_type_name"])
                     
-                    if key not in self.data.keys() or self.meta_data.keys(): 
+                    if key not in self.data.keys(): 
                         self.data[key] = {}
                         self.meta_data[key] = {}
                         
