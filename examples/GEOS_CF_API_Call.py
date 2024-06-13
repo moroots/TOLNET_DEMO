@@ -108,7 +108,9 @@ for i in tqdm(np.arange(0, 65)):
             valid[date] = True
     
         
-        
+
+
+fixed_url = "https://fluid.nccs.nasa.gov/cfapi/assim/chm_p23/o3/39.0x-77.0/20230808/"
         
         
         
