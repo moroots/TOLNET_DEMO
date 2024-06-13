@@ -338,57 +338,75 @@ class TOLNet:
         
         inst_grp_names = self.instrument_groups["instrument_group_name"].to_list()
         
+        """
         group_names = []
         
         for name in self.meta_data.keys():
             group_name = self.meta_data[name]["fileInfo"]["instrument_group_name"]
             if group_name not in group_names:
                 group_names.append(group_name)
+        """
+        
+        group_names = np.array(list(self.meta_data.keys()))[:,0]
+        group_names = np.unique(group_names)
             
         
         # if meta_data["fileInfo"]["insturment_group_name"] not in inst_grp_names:
         #     self.data["instrument_groups"].append(meta_data["fileInfo"]["insturment_group_name"])
                         
-                        
-        fig = plt.figure(figsize=(15, 8))
-        ax = plt.subplots(layout="tight")
-        # fig, ax = plt.subplot_mosaic([[x] for x in group_names], 
-        #                              figsize=(15, 25), 
-        #                              layout="tight")
+        """
+        fig, ax = plt.subplot_mosaic([[x] for x in group_names], 
+                                    figsize=(15, 25), 
+                                      layout="tight")
+                                      """
+                                      
         
         ncmap, nnorm = self.O3_curtain_colors()
-
-        for name in self.data.keys():
-            self.data[name] = self.data[name].fillna(value=np.nan)
-            X, Y, Z = (self.data[name].index, self.data[name].columns, self.data[name].to_numpy().T,)
-            gn = self.meta_data[name]["fileInfo"]["instrument_group_name"]
-            im = ax[gn].pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
-
-            cbar = fig.colorbar(im, ax=ax[gn], pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
+        for key in self.data.keys():
+            dates = []
+            fig, ax = plt.subplots(1, 1, figsize=(15, 8), layout="tight")
+            for filename in self.data[key].keys():
+                self.data[key][filename] = self.data[key][filename].fillna(value=np.nan)
+                
+                X, Y, Z = (self.data[key][filename].index, 
+                           self.data[key][filename].columns, 
+                           self.data[key][filename].to_numpy().T,)
+                           
+                im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
+                dates.append(X[0].date())
+            cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
             cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
-    
-            # if "title" in kwargs.keys():
-            #     plt.title(kwargs["title"], fontsize=18)
-            # else: plt.title(r"$O_3$ Mixing Ratio Profile ($ppb_v$)", fontsize=20)
-    
+            converter = mdates.ConciseDateConverter()
+            munits.registry[datetime.datetime] = converter
+
+            ax.xaxis_date(timezone)
+            dates.sort()
+        # fonts
+            plt.setp(ax.get_xticklabels(), fontsize=16)
+            plt.setp(ax.get_yticklabels(), fontsize=16)
+            cbar.ax.tick_params(labelsize=16)
+            if "title" in kwargs.keys():
+                plt.title(kwargs["title"], fontsize=18)
+            else: plt.title(f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {dates[0]} - {dates[-1]}", fontsize=20)
+            
             if "ylabel" in kwargs.keys():
-                ax[gn].set_ylabel(kwargs["ylabel"], fontsize=18)
-            else: ax[gn].set_ylabel("Altitude (km AGL)", fontsize=18)
+                ax.set_ylabel(kwargs["ylabel"], fontsize=18)
+            else: ax.set_ylabel("Altitude (km AGL)", fontsize=18)
     
             if "xlabel" in kwargs.keys():
-                ax[gn].set_xlabel(kwargs["xlabel"], fontsize=20)
-            else: ax[gn].set_xlabel("Datetime (UTC)", fontsize=18)
+                ax.set_xlabel(kwargs["xlabel"], fontsize=20)
+            else: ax.set_xlabel("Datetime (UTC)", fontsize=18)
     
             if "xlims" in kwargs.keys():
                 lim = kwargs["xlims"]
                 lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-                ax[gn].set_xlim(lims)
+                ax.set_xlim(lims)
     
             if "ylims" in kwargs.keys():
-                ax[gn].set_ylim(kwargs["ylims"])
+                ax.set_ylim(kwargs["ylims"])
     
             if "yticks" in kwargs.keys():
-                ax[gn].set_yticks(kwargs["yticks"], fontsize=20)
+                ax.set_yticks(kwargs["yticks"], fontsize=20)
     
             if "surface" in kwargs.keys():
                 X, Y, C = kwargs["surface"]
@@ -397,16 +415,8 @@ class TOLNet:
             if "sonde" in kwargs.keys():
                 X, Y, C = kwargs["sonde"]
                 ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
-    
-            converter = mdates.ConciseDateConverter()
-            munits.registry[datetime.datetime] = converter
-    
-            ax[gn].xaxis_date(timezone)
-    
-            # fonts
-            plt.setp(ax[gn].get_xticklabels(), fontsize=16)
-            plt.setp(ax[gn].get_yticklabels(), fontsize=16)
-            cbar.ax.tick_params(labelsize=16)
+                
+            
 
         # plt.tight_layout()
 
@@ -430,9 +440,9 @@ if __name__ == "__main__":
     # data = tolnet.import_data_json(min_date="2023-07-01", max_date="2023-08-31", product_type=[4])
     # data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
     #                                product_type=[4]).tolnet_curtains()
-    print(f"Retrieving all HIRES files from {date_start} to {date_end} that were centrally processed:")
+    print(f"Retrieving all HIRES files from {date_start} to {date_end}:")
     data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4])
-    # data.tolnet_curtains()
+    data.tolnet_curtains()
     
     
     # test = tolnet.get_files_list(min_date="2023-07-01", max_date="2023-08-31") 
