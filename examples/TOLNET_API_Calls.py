@@ -89,21 +89,32 @@ class TOLNet:
         return
     
     def products(self): 
+        """
+        Prints out all products and their respective IDs.
+        """
         print("TOLNET product IDs:")
         print(self.products[["id", "product_type_name"]].to_string(index=False))
         return 
     
     
     def file_types(self):
+        """
+        Prints out all available filetypes and their respective IDs.
+        """
         print("File Types:")
         print(self.file_types[["id", "file_type_name"]].to_string(index=False))
 
     def insturment_groups(self):
+        """
+        Prints out all recorded instrument groups and their respective IDs.
+        """
         print("Instrument Groups:")
         print(self.instrument_groups[["id", "instrument_group_name"]].to_string(index=False))
         return
-        
     def processing_types(self):
+        """
+        Prints out all present processing types and their respective IDs.
+        """
         print("Processing Types:")
         print(self.processing_types[["id", "processing_type_name"]].to_string(index=False))
         return
@@ -229,7 +240,15 @@ class TOLNet:
         return self
     
     def _import_data_json(self, min_date, max_date, **kwargs):
-        
+        """
+        Parameters
+        ----------
+        min_date : String
+            The starting date to take from. Formatted as YYYY-MM-DD.
+        max_date: String
+            The ending date to take data from. Formatted as YYYY-MM-DD.
+
+        """ 
         def process_file(file_name, file_id):
             meta_data = self._json_to_dict(file_id)
             data = self._unpack_data(meta_data)
@@ -278,7 +297,12 @@ class TOLNet:
 
     @staticmethod
     def O3_curtain_colors():
+        """
+        Returns
+        -------
+        The color scheme used in the O3 curtain plots on the TOLNet website.
 
+        """
         ncolors = [np.array([255,  140,  255]) / 255.,
            np.array([221,  111,  242]) / 255.,
            np.array([187,  82,  229]) / 255.,
@@ -317,22 +341,19 @@ class TOLNet:
         nnorm = mpl.colors.BoundaryNorm(bounds, ncmap.N)
         return ncmap, nnorm
 
-    def tolnet_curtains(self, smooth: bool=True, timezone: int =None, **kwargs):
+    def tolnet_curtains(self, timezone: int =None, **kwargs):
         """
-
-
         Parameters
         ----------
-        smooth : BOOL, optional
-            DESCRIPTION. The default is True.
         timezone : INT, optional
-            DESCRIPTION. The default is None.
+            The timezone to display the x-axis times in. Defaults to None.
         **kwargs : TYPE
-            DESCRIPTION.
+            Parameters for the plots. The accepted fields are title, xlabel, ylabel,
+            xlims, ylims, yticks, surface, sonde.
 
         Returns
         -------
-        None.
+        A reference to the TOLNet object.
 
         """
         
