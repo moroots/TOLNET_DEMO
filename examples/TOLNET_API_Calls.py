@@ -452,7 +452,7 @@ class TOLNet:
 #%% Example
 date_start = "2023-08-08"
 date_end = "2023-08-11"
-
+product_IDs = [4]
 
 if __name__ == "__main__":
     tolnet = TOLNet()
@@ -462,7 +462,7 @@ if __name__ == "__main__":
     # data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
     #                                product_type=[4]).tolnet_curtains()
     print(f"Retrieving all HIRES files from {date_start} to {date_end}:")
-    data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=[4])
+    data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=product_IDs)
     data.tolnet_curtains()
     
     
