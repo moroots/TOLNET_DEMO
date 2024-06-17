@@ -27,7 +27,8 @@ class filter_files:
     def __init__(self, df):
         self.df = df
         pass
-
+        
+    
     def daterange(self, min_date: str = None, max_date: str = None, **kwargs) -> pd.DataFrame:
         try:
             self.df = self.df[(self.df["start_data_date"] >= min_date) & (self.df["start_data_date"] <= max_date)]
@@ -121,22 +122,54 @@ class TOLNet:
     
     @staticmethod
     def get_product_types():
+        """
+        Returns a DataFrame containing all product types. 
+        The returned DataFrame contains the columns id, processing_type_name, description, 
+        display_order, public, and show_on_graph_page.
+        """
         return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/product_types").json()).sort_values(by=["id"])
 
     @staticmethod
     def get_file_types():
+        """
+        Returns a DataFrame containing all file types.
+        The returned DataFrame contains the columns id, file_type_name, description, display_order, and public.
+        """
         return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/file_types").json()).sort_values(by=["id"])
 
     @staticmethod
     def get_instrument_groups():
+        """
+        Returns a DataFrame containing all instrument groups.
+        The returned DataFrame contains the columns id, instrument_group_name, folder_name, description,
+        display_order, current_pi(Principle Investigator), doi, and citation_url.
+        """
         return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/instruments/groups").json()).sort_values(by=["id"])
     
     @staticmethod
     def get_processing_types():
+        """
+        Returns a DataFrame containing all processing types.
+        The returned DataFrame contains the columns id, processing_type_name, description, display_order,
+        public, and show_on_graph_page.
+        """
         return pd.DataFrame(requests.get("https://tolnet.larc.nasa.gov/api/data/processing_types").json()).sort_values(by=["id"])
 
     @staticmethod
     def get_files_list(min_date, max_date):
+        """
+        Parameters
+        ----------
+        min_date : STR
+            The starting date for the query, in YYYY-MM-DD format.
+        max_date : STR
+            The ending date for the query, in YYYY-MM-DD format.
+
+        Returns
+        -------
+        A DataFrame containing all files from the TOLNet API that fall between the two provided dates.
+        The DataFrame contains each file name as well as various descriptors.
+        """
         dtypes = {"row": "int16",
                  "count": "int16",
                  "id": "int16",
@@ -184,6 +217,19 @@ class TOLNet:
         return df.astype(dtypes)
 
     def _add_timezone(self, time):
+        """
+        Parameters
+        ----------
+        min_date : STR
+            The starting date for the query, in YYYY-MM-DD format.
+        max_date : STR
+            The ending date for the query, in YYYY-MM-DD format.
+
+        Returns
+        -------
+        A DataFrame containing all files from the TOLNet API that fall between the two provided dates.
+        The DataFrame contains each file name as well as various descriptors.
+        """
         return [utc.replace(tzinfo=tz.gettz('UTC')) for utc in time]
 
     def change_timezone(self, timezone: str):
@@ -196,6 +242,16 @@ class TOLNet:
         return self
 
     def _json_to_dict(self, file_id: int) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        file_id : INT
+            The ID of the file to retrieve from the API.
+
+        Returns
+        -------
+        A dictionary containing the file's ozone values and metadata.
+        """
         try:
             url = f"https://tolnet.larc.nasa.gov/api/data/json/{file_id}"
             response = requests.get(url).json()
@@ -219,6 +275,15 @@ class TOLNet:
         return self
     
     def _unpack_data(self, meta_data):
+        """
+        Parameters
+        ----------
+        meta_data : A dictionary of a file's metadata
+
+        Returnss
+        -------
+        A DataFrame containing that same metadata
+        """
         df = pd.DataFrame(meta_data["value"]["data"], 
                           columns = meta_data["altitude"]["data"],
                           index = pd.to_datetime(meta_data["datetime"]["data"])
@@ -227,6 +292,7 @@ class TOLNet:
 
 
     def import_data_json(self, min_date, max_date, **kwargs):
+        
         self.files = self.get_files_list(min_date, max_date)
         file_info = filter_files(self.files).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).processing_type(**kwargs).df
         if file_info.size == self.files.size:
@@ -359,28 +425,8 @@ class TOLNet:
         
         inst_grp_names = self.instrument_groups["instrument_group_name"].to_list()
         
-        """
-        group_names = []
-        
-        for name in self.meta_data.keys():
-            group_name = self.meta_data[name]["fileInfo"]["instrument_group_name"]
-            if group_name not in group_names:
-                group_names.append(group_name)
-        """
-        
         group_names = np.array(list(self.meta_data.keys()))[:,0]
         group_names = np.unique(group_names)
-            
-        
-        # if meta_data["fileInfo"]["insturment_group_name"] not in inst_grp_names:
-        #     self.data["instrument_groups"].append(meta_data["fileInfo"]["insturment_group_name"])
-                        
-        """
-        fig, ax = plt.subplot_mosaic([[x] for x in group_names], 
-                                    figsize=(15, 25), 
-                                      layout="tight")
-                                      """
-                                      
         
         ncmap, nnorm = self.O3_curtain_colors()
         for key in self.data.keys():
@@ -437,10 +483,6 @@ class TOLNet:
                 X, Y, C = kwargs["sonde"]
                 ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
                 
-            
-
-        # plt.tight_layout()
-
         if "savefig" in kwargs.keys():
             plt.savefig(f"{kwargs['savefig']}", dpi=600)
 
@@ -457,10 +499,6 @@ product_IDs = [4]
 if __name__ == "__main__":
     tolnet = TOLNet()
     print("Created TOLNET intance")
-    
-    # data = tolnet.import_data_json(min_date="2023-07-01", max_date="2023-08-31", product_type=[4])
-    # data = tolnet._import_data_json(min_date="2023-08-08", max_date="2023-08-11", 
-    #                                product_type=[4]).tolnet_curtains()
     print(f"Retrieving all HIRES files from {date_start} to {date_end}:")
     data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=product_IDs)
     data.tolnet_curtains()
