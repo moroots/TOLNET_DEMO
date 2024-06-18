@@ -499,7 +499,18 @@ product_IDs = [4]
 if __name__ == "__main__":
     tolnet = TOLNet()
     print("Created TOLNET intance")
-    print(f"Retrieving all HIRES files from {date_start} to {date_end}:")
+    
+    productquery = ""
+    for id in product_IDs:
+        productquery += tolnet.products.loc[
+            tolnet.products["id"] == id].iloc[0]['product_type_name']
+        if id != product_IDs[-1]:
+            productquery += ","
+        productquery += " "
+    
+    
+    
+    print(f"Retrieving all {productquery}files from {date_start} to {date_end}:")
     data = tolnet._import_data_json(min_date=date_start, max_date=date_end, product_type=product_IDs)
     data.tolnet_curtains()
     
