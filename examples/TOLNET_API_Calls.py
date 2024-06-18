@@ -217,27 +217,15 @@ class TOLNet:
         return df.astype(dtypes)
 
     def _add_timezone(self, time):
-        """
-        Parameters
-        ----------
-        min_date : STR
-            The starting date for the query, in YYYY-MM-DD format.
-        max_date : STR
-            The ending date for the query, in YYYY-MM-DD format.
-
-        Returns
-        -------
-        A DataFrame containing all files from the TOLNet API that fall between the two provided dates.
-        The DataFrame contains each file name as well as various descriptors.
-        """
         return [utc.replace(tzinfo=tz.gettz('UTC')) for utc in time]
 
     def change_timezone(self, timezone: str):
         to_zone = tz.gettz(timezone)
 
         for key in self.data.keys():
-            time = self.data[key].index.to_list()
-            self.data[key].index = [t.astimezone(to_zone) for t in time]
+            for filename in self.data[key].keys():
+                time = self.data[key][file].index.to_list()
+                self.data[key][file].index = [t.astimezone(to_zone) for t in time]
 
         return self
 
