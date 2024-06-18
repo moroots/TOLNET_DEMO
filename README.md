@@ -11,3 +11,11 @@
 - utilities
 - references
 - scrap
+
+
+---
+## Installation
+**To install the latest version**
+```python 
+pip install git+https://github.com/moroots/DATAS
+```
