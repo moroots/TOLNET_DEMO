@@ -1,4 +1,4 @@
-# TOLNET_Summer
+# TOLNET_DEMO
 
 ### Summer 2024
 - Intern: Arthur Perng
@@ -17,5 +17,5 @@
 ## Installation
 **To install the latest version**
 ```python 
-pip install git+https://github.com/moroots/TOLNET_Summer
+pip install git+https://github.com/moroots/TOLNET_DEMO
 ```

@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-with open(r"tolnet/requirements.txt", "r") as f:
+with open(r"TOLNET_DEMO/requirements.txt", "r") as f:
     reqs = f.read()
 
 reqs = reqs.replace(" ", "")
@@ -16,7 +16,7 @@ reqs = ' '.join(reqs)
 reqs = reqs.split()
 
 setup(
-    name='TOLNet',
+    name='TOLNET_DEMO',
     version="2024.06.18",
     author='Maurice Roots',
     author_email='themauriceroots@gmail.com',
