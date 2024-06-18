@@ -280,7 +280,7 @@ class TOLNet:
         ----------
         meta_data : A dictionary of a file's metadata
 
-        Returnss
+        Returns
         -------
         A DataFrame containing that same metadata
         """
@@ -498,7 +498,7 @@ product_IDs = [4]
 
 if __name__ == "__main__":
     tolnet = TOLNet()
-    print("Created TOLNET intance")
+    print("Created TOLNET instance")
     
     productquery = ""
     for id in product_IDs:
