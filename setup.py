@@ -16,7 +16,7 @@ reqs = ' '.join(reqs)
 reqs = reqs.split()
 
 setup(
-    name='TOLNet',
+    name='TOLNET_DEMO',
     version="2024.06.18",
     author='Maurice Roots',
     author_email='themauriceroots@gmail.com',
