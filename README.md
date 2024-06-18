@@ -17,5 +17,5 @@
 ## Installation
 **To install the latest version**
 ```python 
-pip install git+https://github.com/moroots/DATAS
+pip install git+https://github.com/moroots/TOLNET_Summer
 ```
