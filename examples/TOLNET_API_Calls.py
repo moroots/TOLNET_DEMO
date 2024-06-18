@@ -470,9 +470,10 @@ class TOLNet:
             if "sonde" in kwargs.keys():
                 X, Y, C = kwargs["sonde"]
                 ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
-                
-        if "savefig" in kwargs.keys():
-            plt.savefig(f"{kwargs['savefig']}", dpi=600)
+            if "savefig" in kwargs.keys() and kwargs['savefig']:
+                plotname = f"{key[0]}_{key[1]}_{dates[0]}_{dates[-1]}.png"
+                plotname = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
+                plt.savefig(f"{plotname}", dpi=350)
 
         plt.show()
 
