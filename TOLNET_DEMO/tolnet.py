@@ -86,6 +86,7 @@ class TOLNet:
         self.file_types = self.get_file_types()
         self.instrument_groups = self.get_instrument_groups()
         self.processing_types = self.get_processing_types()
+        pd.set_option('display.max_colwidth', None)
         # self.files = self.get_files_list()
         return
     
@@ -94,7 +95,7 @@ class TOLNet:
         Prints out all products and their respective IDs.
         """
         print("\n TOLNET product IDs:")
-        print(self.products[["id", "product_type_name"]].to_string(index=False), '\n')
+        print(self.products[["id", "product_type_name", "description"]].to_string(index=False), '\n')
         return 
     
     
@@ -111,7 +112,7 @@ class TOLNet:
         Prints out all recorded instrument groups and their respective IDs.
         """
         print("\n Instrument Groups:")
-        print(self.instrument_groups[["id", "instrument_group_name"]].to_string(index=False), '\n')
+        print(self.instrument_groups[["id", "instrument_group_name", "description"]].to_string(index=False), '\n')
         return
     
     def print_processing_types(self):
@@ -446,8 +447,10 @@ class TOLNet:
                 X, Y, C = kwargs["sonde"]
                 ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
                 
-        if "savefig" in kwargs.keys():
-            plt.savefig(f"{kwargs['savefig']}", dpi=600)
+            if "savefig" in kwargs.keys() and kwargs['savefig']:
+                plotname = f"{key[0]}_{key[1]}_{dates[0]}_{dates[-1]}.png"
+                plotname = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
+                plt.savefig(f"{plotname}", dpi=350)
 
         plt.show()
 
