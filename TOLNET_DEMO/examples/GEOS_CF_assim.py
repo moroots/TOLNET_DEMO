@@ -9,13 +9,14 @@ import pandas as pd
 class GEOS_CF():
     
     def __init__(self):
-        self.base_url = "https://fluid.nccs.nasa.gov/cfapi"
+        # self.base_url = "https://fluid.nccs.nasa.gov/cfapi"
+        self.base_url = "https://dphttpdev01.nccs.nasa.gov/data-services/cfapi"
         self.times = []
         self.schema = requests.get(self.base_url).json()
         return
     
-    def _get_dat(self, collection, molecule, lat, lon, date):
-        url_query = f'{self.base_url}/{collection}/chm_p23/{molecule}/{lat}x{lon}/{date}'
+    def _get_dat(self, collection, molecule, lat, lon, date_start, date_end):
+        url_query = f'{self.base_url}/{collection}/chm/p23/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
         print(url_query)
         response = requests.get(url_query).json()
         
@@ -108,7 +109,7 @@ class GEOS_CF():
 if __name__ == "__main__":
     geos = GEOS_CF()
     print("Created GEOS intance")
-    geos._get_dat("assim", "O3", "39.0", "-77.0", "20230808")
+    geos._get_dat("assim", "O3", "39.0", "-77.0", "20230805", "20230808")
     geos.curtain_plot()
         
         
