@@ -1,3 +1,5 @@
+# Unused. Use GEOS_CF_assim.py instead.
+
 import requests
 
 import matplotlib as mpl
