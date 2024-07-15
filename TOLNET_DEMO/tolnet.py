@@ -293,7 +293,7 @@ class TOLNet:
             if prompt.lower() != "yes":
                 return
     
-        self.data = {}
+        self.data = {"dates": (min_date, max_date)}
         self.meta_data = {}
         
         # Use ThreadPoolExecutor for multithreading
@@ -394,7 +394,10 @@ class TOLNet:
         
         ncmap, nnorm = self.O3_curtain_colors()
         for key in self.data.keys():
-            dates = []
+        
+            if key == 'dates':
+                continue
+                
             fig, ax = plt.subplots(1, 1, figsize=(15, 8), layout="tight")
             for filename in self.data[key].keys():
                 self.data[key][filename] = self.data[key][filename].fillna(value=np.nan)
@@ -404,21 +407,18 @@ class TOLNet:
                            self.data[key][filename].to_numpy().T,)
                            
                 im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
-                dates.append(X[0].date())
             cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
             cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
             converter = mdates.ConciseDateConverter()
             munits.registry[datetime.datetime] = converter
 
             ax.xaxis_date(timezone)
-            dates.sort()
         # fonts
             plt.setp(ax.get_xticklabels(), fontsize=16)
             plt.setp(ax.get_yticklabels(), fontsize=16)
             cbar.ax.tick_params(labelsize=16)
-            if "title" in kwargs.keys():
-                plt.title(kwargs["title"], fontsize=18)
-            else: plt.title(f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {dates[0]} - {dates[-1]}", fontsize=20)
+            
+            
             
             if "ylabel" in kwargs.keys():
                 ax.set_ylabel(kwargs["ylabel"], fontsize=18)
@@ -431,7 +431,10 @@ class TOLNet:
             if "xlims" in kwargs.keys():
                 lim = kwargs["xlims"]
                 lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-                ax.set_xlim(lims)
+            else:
+                lim = self.data['dates']
+                lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
+            ax.set_xlim(lims)
     
             if "ylims" in kwargs.keys():
                 ax.set_ylim(kwargs["ylims"])
@@ -447,8 +450,13 @@ class TOLNet:
                 X, Y, C = kwargs["sonde"]
                 ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
                 
+            if "title" in kwargs.keys():
+                plt.title(kwargs["title"], fontsize=18)
+            else: 
+                plt.title(f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {str(lims[0])} - {str(lims[1])}", fontsize=20)
+                
             if "savefig" in kwargs.keys() and kwargs['savefig']:
-                plotname = f"{key[0]}_{key[1]}_{dates[0]}_{dates[-1]}.png"
+                plotname = f"{key[0]}_{key[1]}_{str(lims[0])}_{str(lims[-1])}.png"
                 plotname = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
                 plt.savefig(f"{plotname}", dpi=350)
 

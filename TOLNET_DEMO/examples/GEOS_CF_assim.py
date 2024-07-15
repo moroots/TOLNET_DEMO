@@ -17,7 +17,7 @@ class GEOS_CF():
     
     def _get_dat(self, collection, molecule, lat, lon, date_start, date_end):
         url_query = f'{self.base_url}/{collection}/chm/p23/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
-        print(url_query)
+        # print(url_query)
         response = requests.get(url_query).json()
         
         self.meta_data = response['schema']
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     print("Created GEOS intance")
     geos._get_dat("assim", "O3", "39.0", "-77.0", "20230805", "20230808")
     geos.curtain_plot()
-        
+    
         
         
         
