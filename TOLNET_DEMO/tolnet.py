@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 28 13:32:30 2023
 
-@author: Maurice Roots, Arthur Perng, John T. Sullivna
+@author: Maurice Roots, Arthur Perng, John T. Sullivan
 """
 
 import requests
@@ -24,8 +24,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 #%% Function Space
 
 class filter_files:
-    def __init__(self, df):
+    def __init__(self, df, ptypes):
         self.df = df
+        self.processing_types = ptypes
         pass
         
     
@@ -63,19 +64,16 @@ class filter_files:
         id 2 = in-house 
         id 3 = unprocessed
         """
-        
-        
-        
-        
         try:
             processing_type_names = []
-            types = tolnet.processing_types
+            types = self.processing_types
             for process in processing_type:
                 processing_type_names.append(
                     list(types["processing_type_name"][types["id"] == process])[0])
-                    
+            # print(processing_type_names)
             self.df = self.df[self.df["processing_type_name"].isin(processing_type_names)]
-        except:
+        except Exception as e:
+            # print(e)
             pass
         return self
 
@@ -286,7 +284,7 @@ class TOLNet:
             return file_name, meta_data, data
         
         self.files = self.get_files_list(min_date, max_date)
-        file_info = filter_files(self.files).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).processing_type(**kwargs).df
+        file_info = filter_files(self.files, self.processing_types).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).processing_type(**kwargs).df
     
         if file_info.size == self.files.size:
             prompt = input("You are about to download ALL TOLNet JSON files available... Would you like to proceed? (yes | no)")
