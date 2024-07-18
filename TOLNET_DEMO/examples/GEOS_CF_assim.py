@@ -4,6 +4,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+pd.set_option('future.no_silent_downcasting', True) # Remove warning about future behavior
+
 # met_url = f'{base_url}/{collection}/{dataset}/{molecule}/{lat}x{lon}/{start_date}'
 
 class GEOS_CF():

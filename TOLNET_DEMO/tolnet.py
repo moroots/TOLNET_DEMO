@@ -23,6 +23,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 #%% Function Space
 
+# pd.set_option('future.no_silent_downcasting', True) # Remove warning about future behavior
+
+
 class filter_files:
     def __init__(self, df, ptypes):
         self.df = df
