@@ -85,7 +85,7 @@ class utilities:
         self.data = {}
         return
     
-    def O3_curtain_colors():
+    def O3_curtain_colors(self):
         """
         Returns
         -------
@@ -135,13 +135,14 @@ class utilities:
         
         params = {"ylabel": "Altitude (km AGL)",
                   "xlabel": "Datetime (UTC)",
-                  "fontsize_lable": 18,
+                  "fontsize_label": 18,
                   "fontsize_ticks": 16,
                   "fontsize_title": 20,
                   "title": r"$O_3$ Mixing Ratio Profile",
                   "savefig": None,
                   "ylims": [0, 15],
                   "xlims": [X[0], X[-1]],
+                  "yticks": np.arange(0, 15.1, 0.5),
                   "figsize": (15, 8),
                   "layout": "tight",
                   "cbar_label": 'Ozone ($ppb_v$)',
@@ -149,7 +150,6 @@ class utilities:
                   }
         
         params.update(kwargs)
-        
         ncmap, nnorm = self.O3_curtain_colors()
         fig, ax = plt.subplots(1, 1, figsize=params["figsize"], layout=params["layout"])
         im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
@@ -165,13 +165,14 @@ class utilities:
         ax.set_ylabel(params["ylabel"], fontsize=params["fontsize_label"])
         ax.set_xlabel(params["xlabel"], fontsize=params["fontsize_label"])
 
-        ax.set_xlim(params["xlims"])
+        ax.set_xlim(
+            [np.datetime64(params["xlims"][0]), 
+            np.datetime64(params["xlims"][1])]
+            )
 
+        ax.set_yticks(params["yticks"])
+        
         ax.set_ylim(params["ylims"])
-            
-        ax.set_yticks(params["yticks"], fontsize=params["fontsize_yticks"])
-
-        ax.set_yticks(params["yticks"], fontsize=params["fontsize_yticks"])
         
         converter = mdates.ConciseDateConverter()
         munits.registry[datetime.datetime] = converter
@@ -190,12 +191,12 @@ class GEOS_CF(utilities):
     # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/chm/v72/O3/39x-77/20230808/20230811
     # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/met/v72/MET/39x-77/20230808/20230811
     def __init__(self, internal=True):
+        super().__init__()
         if internal == False: 
             self.base_url = "https://fluid.nccs.nasa.gov/cfapi"
         else: 
             self.base_url = r"https://dphttpdev01.nccs.nasa.gov/data-services/"
 
-        self.schema = requests.get(self.base_url).json()
         self.data[("GEOS_CF", "Replay")] = {}
         return
     
@@ -509,29 +510,32 @@ class TOLNet(GEOS_CF):
         ncmap, nnorm = self.O3_curtain_colors()
         for key in self.data.keys():
         
-            if key == 'dates':
+            if key in ["dates", ("GEOS_CF", "Replay")]:
                 continue
-                
-            fig, ax = plt.subplots(1, 1, figsize=(15, 8), layout="tight")
+            
+            df = []
+            # fig, ax = plt.subplots(1, 1, figsize=(15, 8), layout="tight")
             for filename in self.data[key].keys():
                 self.data[key][filename] = self.data[key][filename].fillna(value=np.nan)
                 
-                X, Y, Z = (self.data[key][filename].index, 
-                           self.data[key][filename].columns, 
-                           self.data[key][filename].to_numpy().T,)
+                df.append(self.data[key][filename])
+                
+            lim = self.data['dates']
+            xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
+    
+            title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {str(xlims[0])} - {str(xlims[1])}"
+    
+            plotname = f"{key[0]}_{key[1]}_{str(xlims[0])}_{str(xlims[-1])}.png"
+            savefig = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
             
-                lim = self.data['dates']
-                xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-        
-                title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {str(xlims[0])} - {str(xlims[1])}"
-        
-                plotname = f"{key[0]}_{key[1]}_{str(xlims[0])}_{str(xlims[-1])}.png"
-                savefig = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
-                
-                params = {"title": title, "savefig": savefig, "xlims": xlims}
-                params.update(kwargs)
-                
-                self.curtain_plot(X, Y, Z, **params)
+            params = {"title": title, "savefig": savefig, "xlims": xlims}
+            params.update(kwargs)
+            
+            df = pd.concat(df); df.sort_index(inplace=True)
+            
+            X, Y, Z = (df.index, df.columns, df.to_numpy().T,)
+            
+            self.curtain_plot(X, Y, Z, **params)
 
         return self
 
