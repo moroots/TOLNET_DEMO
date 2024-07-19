@@ -30,7 +30,7 @@ class filter_files:
     def __init__(self, df, ptypes):
         self.df = df
         self.processing_types = ptypes
-        pass
+        return
         
     
     def daterange(self, min_date: str = None, max_date: str = None, **kwargs) -> pd.DataFrame:
@@ -80,37 +80,11 @@ class filter_files:
             pass
         return self
 
-class GEOS_CF():
-    # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/chm/v72/O3/39x-77/20230808/20230811
-    # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/met/v72/MET/39x-77/20230808/20230811
+class utilities:
     def __init__(self):
-        # self.base_url = "https://fluid.nccs.nasa.gov/cfapi"
-        self.base_url = "https://dphttpdev01.nccs.nasa.gov/data-services/cfapi"
-        self.times = []
-        self.schema = requests.get(self.base_url).json()
+        self.data = {}
         return
     
-    def _get_geos_data(self, collection, molecule, lat, lon, date_start, date_end):
-        url_query = f'{self.base_url}/{collection}/chm/p23/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
-        # print(url_query)
-        response = requests.get(url_query).json()
-        
-        self.meta_data = response['schema']
-        self.times += response['time']
-        
-        # Tweak later when querying multiple files
-        self.data = pd.DataFrame.from_dict(response['values'][molecule])
-        
-        self.data.index = [pd.to_datetime(time, format="%Y-%m-%dT%H:%M:%S") for time in self.times]
-        self.data.columns = self.data.columns.astype(float)
-        self.data.sort_index(axis=1, inplace=True)
-        # self.data = np.flipud(self.data)
-        return self
-    
-        
-    
-        
-    @staticmethod
     def O3_curtain_colors():
         """
         Returns
@@ -155,33 +129,117 @@ class GEOS_CF():
         bounds =   [0.001, *np.arange(5, 110, 5), 120, 150, 200, 300, 600]
         nnorm = mpl.colors.BoundaryNorm(bounds, ncmap.N)
         return ncmap, nnorm
+    
+    
+    def curtain_plot(self, X, Y, Z, **kwargs):
         
-    def curtain_plot(self):
+        params = {"ylabel": "Altitude (km AGL)",
+                  "xlabel": "Datetime (UTC)",
+                  "fontsize_lable": 18,
+                  "fontsize_ticks": 16,
+                  "fontsize_title": 20,
+                  "title": r"$O_3$ Mixing Ratio Profile",
+                  "savefig": None,
+                  "ylims": [0, 15],
+                  "xlims": [X[0], X[-1]],
+                  "figsize": (15, 8),
+                  "layout": "tight",
+                  "cbar_label": 'Ozone ($ppb_v$)',
+                  "fontsize_cbar": 16
+                  }
+        
+        params.update(kwargs)
         
         ncmap, nnorm = self.O3_curtain_colors()
-        fig, ax = plt.subplots(1, 1, figsize=(15, 8), layout="tight")
-        X, Y, Z = (self.data.index, 
-                           self.data.columns, 
-                           self.data.to_numpy().T,)
+        fig, ax = plt.subplots(1, 1, figsize=params["figsize"], layout=params["layout"])
         im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
         cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
-        cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
+        cbar.set_label(label=params["cbar_label"], size=16, weight="bold")
         
+        plt.setp(ax.get_xticklabels(), fontsize=params["fontsize_ticks"])
+        plt.setp(ax.get_yticklabels(), fontsize=params["fontsize_ticks"])
         
-        plt.setp(ax.get_xticklabels(), fontsize=16)
-        plt.setp(ax.get_yticklabels(), fontsize=16)
+        cbar.ax.tick_params(labelsize=params["fontsize_ticks"])
+        plt.title(params["title"], fontsize=params["fontsize_title"])
+
+        ax.set_ylabel(params["ylabel"], fontsize=params["fontsize_label"])
+        ax.set_xlabel(params["xlabel"], fontsize=params["fontsize_label"])
+
+        ax.set_xlim(params["xlims"])
+
+        ax.set_ylim(params["ylims"])
+            
+        ax.set_yticks(params["yticks"], fontsize=params["fontsize_yticks"])
+
+        ax.set_yticks(params["yticks"], fontsize=params["fontsize_yticks"])
         
-        plt.gca().invert_yaxis()
+        converter = mdates.ConciseDateConverter()
+        munits.registry[datetime.datetime] = converter
+        ax.xaxis_date()
         
-        cbar.ax.tick_params(labelsize=16)
-        plt.title(
-            f"$O_3$ Mixing Ratio Profile (assim dataset)", fontsize=20)
-        ax.set_ylabel("Pressure Level", fontsize=18)
-        ax.set_xlabel("Datetime (UTC)", fontsize=18)
+        if params["savefig"]:
+            plt.savefig(params["savefig"], dpi=350)
+            
         plt.show()
+        
+        return
+    
+    
+    
+class GEOS_CF(utilities):
+    # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/chm/v72/O3/39x-77/20230808/20230811
+    # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/met/v72/MET/39x-77/20230808/20230811
+    def __init__(self, internal=True):
+        if internal == False: 
+            self.base_url = "https://fluid.nccs.nasa.gov/cfapi"
+        else: 
+            self.base_url = r"https://dphttpdev01.nccs.nasa.gov/data-services/"
+
+        self.schema = requests.get(self.base_url).json()
+        self.data[("GEOS_CF", "Replay")] = {}
+        return
+    
+    def _get_geos_data(self, collection, molecule, lat, lon, date_start, date_end):
+        ozone_query = f'{self.base_url}/{collection}/chm/v72/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
+        heights_query = f'{self.base_url}/{collection}/chm/v72/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
+        ozone_response = requests.get(ozone_query).json()
+        met_response = requests.get(heights_query).json()
+        
+        ozone = pd.DataFrame(ozone_response['values']['O3'])
+        ozone.columns = pd.to_numeric(ozone.columns)
+        ozone.sort_index(axis=1, inplace=True)
+        
+        heights = pd.DataFrame(met_response['values']['ZL'])
+        heights.columns = pd.to_numeric(heights.columns)
+        heights.sort_index(axis=1, inplace=True)
+        
+        times = pd.to_datetime(ozone_response['time'], utc=True, format="%Y-%m-%dT%H:%M:%S")
+        times = np.tile(times, (72, 1))
+
+        self.data[("GEOS_CF", "Replay")][date_start] = {"height": heights,
+                                                        "ozone": ozone.to_numpy(),
+                                                        "time": times.T}
         return self
-
-
+    
+    def get_geos_data_multithreaded(self, collection, molecule, lat, lon, start_date, end_date):
+        
+        def fetch_geos_data_for_date(self, collection, molecule, lat, lon, date):
+            date_str = date.strftime('%Y-%m-%d')
+            return self._get_geos_data(collection, molecule, lat, lon, date_str, date_str)
+        
+        date_range = pd.date_range(start=start_date, end=end_date)
+        
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(fetch_geos_data_for_date, self, collection, molecule, lat, lon, date) for date in date_range]
+            
+            for future in as_completed(futures):
+                try:
+                    future.result()  # We can retrieve the result if needed or just ensure it completes without exceptions
+                except Exception as e:
+                    print(f"Error fetching data for date: {e}")
+    
+        return self
+    
 
 class TOLNet(GEOS_CF):
 
@@ -191,8 +249,7 @@ class TOLNet(GEOS_CF):
         self.file_types = self.get_file_types()
         self.instrument_groups = self.get_instrument_groups()
         self.processing_types = self.get_processing_types()
-        pd.set_option('display.max_colwidth', None)
-        # self.files = self.get_files_list()
+        self.data = {}
         return
     
     def print_product_types(self): 
@@ -428,55 +485,7 @@ class TOLNet(GEOS_CF):
     
         return self
 
-    
-
-    @staticmethod
-    def O3_curtain_colors():
-        """
-        Returns
-        -------
-        The color scheme used in the O3 curtain plots on the TOLNet website.
-
-        """
-        ncolors = [np.array([255,  140,  255]) / 255.,
-           np.array([221,  111,  242]) / 255.,
-           np.array([187,  82,  229]) / 255.,
-           np.array([153,  53,  216]) / 255.,
-           np.array([119,  24,  203]) / 255.,
-           np.array([0,  0,  187]) / 255.,
-           np.array([0,  44,  204]) / 255.,
-           np.array([0,  88,  221]) / 255.,
-           np.array([0,  132,  238]) / 255.,
-           np.array([0,  165,  255]) / 255.,
-           np.array([0,  235,  255]) / 255.,
-           np.array([39,  255,  215]) / 255.,
-           np.array([99,  255,  150]) / 255.,
-           np.array([163,  255,  91]) / 255.,
-           np.array([211,  255,  43]) / 255.,
-           np.array([255,  255,  0]) / 255.,
-           np.array([250,  200,  0]) / 255.,
-           np.array([255,  159,  0]) / 255.,
-           np.array([255,  111,  0]) / 255.,
-           np.array([255,  63,  0]) / 255.,
-           np.array([255,  0,  0]) / 255.,
-           np.array([216,  0,  15]) / 255.,
-           np.array([178,  0,  31]) / 255.,
-           np.array([140,  0,  47]) / 255.,
-           np.array([102,  0,  63]) / 255.,
-           np.array([200,  200,  200]) / 255.,
-           np.array([140,  140,  140]) / 255.,
-           np.array([80,  80,  80]) / 255.,
-           np.array([52,  52,  52]) / 255.,
-           np.array([0,0,0]) ]
-
-        ncmap = mpl.colors.ListedColormap(ncolors)
-        ncmap.set_under([1,1,1])
-        ncmap.set_over([0,0,0])
-        bounds =   [0.001, *np.arange(5, 110, 5), 120, 150, 200, 300, 600]
-        nnorm = mpl.colors.BoundaryNorm(bounds, ncmap.N)
-        return ncmap, nnorm
-
-    def tolnet_curtains(self, timezone: int =None, **kwargs):
+    def tolnet_curtains(self, **kwargs):
         """
         Parameters
         ----------
@@ -510,62 +519,19 @@ class TOLNet(GEOS_CF):
                 X, Y, Z = (self.data[key][filename].index, 
                            self.data[key][filename].columns, 
                            self.data[key][filename].to_numpy().T,)
-                           
-                im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
-            cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
-            cbar.set_label(label='Ozone ($ppb_v$)', size=16, weight="bold")
-            converter = mdates.ConciseDateConverter()
-            munits.registry[datetime.datetime] = converter
-
-            ax.xaxis_date(timezone)
-        # fonts
-            plt.setp(ax.get_xticklabels(), fontsize=16)
-            plt.setp(ax.get_yticklabels(), fontsize=16)
-            cbar.ax.tick_params(labelsize=16)
             
-            
-            
-            if "ylabel" in kwargs.keys():
-                ax.set_ylabel(kwargs["ylabel"], fontsize=18)
-            else: ax.set_ylabel("Altitude (km AGL)", fontsize=18)
-    
-            if "xlabel" in kwargs.keys():
-                ax.set_xlabel(kwargs["xlabel"], fontsize=20)
-            else: ax.set_xlabel("Datetime (UTC)", fontsize=18)
-    
-            if "xlims" in kwargs.keys():
-                lim = kwargs["xlims"]
-                lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-            else:
                 lim = self.data['dates']
-                lims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-            ax.set_xlim(lims)
-    
-            if "ylims" in kwargs.keys():
-                ax.set_ylim(kwargs["ylims"])
-    
-            if "yticks" in kwargs.keys():
-                ax.set_yticks(kwargs["yticks"], fontsize=20)
-    
-            if "surface" in kwargs.keys():
-                X, Y, C = kwargs["surface"]
-                ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
-    
-            if "sonde" in kwargs.keys():
-                X, Y, C = kwargs["sonde"]
-                ax.scatter(X, Y, c=C, cmap=ncmap, norm=nnorm)
+                xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
+        
+                title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {str(xlims[0])} - {str(xlims[1])}"
+        
+                plotname = f"{key[0]}_{key[1]}_{str(xlims[0])}_{str(xlims[-1])}.png"
+                savefig = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
                 
-            if "title" in kwargs.keys():
-                plt.title(kwargs["title"], fontsize=18)
-            else: 
-                plt.title(f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {str(lims[0])} - {str(lims[1])}", fontsize=20)
+                params = {"title": title, "savefig": savefig, "xlims": xlims}
+                params.update(kwargs)
                 
-            if "savefig" in kwargs.keys() and kwargs['savefig']:
-                plotname = f"{key[0]}_{key[1]}_{str(lims[0])}_{str(lims[-1])}.png"
-                plotname = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
-                plt.savefig(f"{plotname}", dpi=350)
-
-        plt.show()
+                self.curtain_plot(X, Y, Z, **params)
 
         return self
 
