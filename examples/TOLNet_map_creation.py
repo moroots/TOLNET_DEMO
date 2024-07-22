@@ -113,4 +113,4 @@ plt.plot(homebases['longitude'], homebases['latitude'], "o", color=homebase_colo
 plt.ylim(ylims)
 plt.xlim(xlims)
 ax.legend(ncols=2, bbox_to_anchor=(0.5, 1.02), loc="center", fontsize=18)
-plt.savefig("data_map.png")
+plt.savefig("data_map.png",dpi=300, bbox_inches = "tight")
