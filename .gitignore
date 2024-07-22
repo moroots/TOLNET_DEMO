@@ -3,6 +3,7 @@
 .ipynb_checkpoints/setup-checkpoint.py
 tolnet/__pycache__/tolnet.cpython-312.pyc
 *.png
+!data_map.png
 TOLNET_DEMO/examples/.ipynb_checkpoints/untitled-checkpoint.txt
 TOLNET_DEMO/examples/untitled.txt
 TOLNET_DEMO/examples/.ipynb_checkpoints/Untitled-checkpoint.ipynb

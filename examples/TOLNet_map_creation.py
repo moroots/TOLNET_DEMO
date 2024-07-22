@@ -7,6 +7,11 @@ import pandas
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+land_color = "lightsteelblue"
+state_border_color = "black"
+campaign_color = "gold"
+homebase_color = "firebrick"
+
 def get_files_list():
     """
     Parameters
@@ -100,12 +105,12 @@ stations = [
 homebases = pandas.DataFrame(stations)
 fig, ax = plt.subplots(figsize=(20, 20), layout="tight")
 plt.title("TOLNet Dataset Locations", fontsize=36, loc="center", y=1.05)
-earth.plot(ax=ax, color="lightsteelblue")
-states.boundary.plot(ax=ax, color="black")
-plt.plot(longs, lats, "o", color="yellow", markersize=15, label="Campaign Data")
-plt.plot(homebases['longitude'], homebases['latitude'], "o", color="red", markersize=15, label="Homebase Locations")
+earth.plot(ax=ax, color=land_color)
+states.boundary.plot(ax=ax, color=state_border_color)
+plt.plot(longs, lats, "o", color=campaign_color, markersize=15, label="Campaign Data")
+plt.plot(homebases['longitude'], homebases['latitude'], "o", color=homebase_color, markersize=15, label="Homebase Locations")
 
 plt.ylim(ylims)
 plt.xlim(xlims)
 ax.legend(ncols=2, bbox_to_anchor=(0.5, 1.02), loc="center", fontsize=18)
-plt.show()
+plt.savefig("data_map.png")
