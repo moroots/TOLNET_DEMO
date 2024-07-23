@@ -162,7 +162,7 @@ class utilities:
             im = ax.contourf(X, Y, Z, levels=levels, cmap=ncmap, norm=nnorm)
             
         else:
-            im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
+            im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest", alpha=1)
             
         cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
         cbar.set_label(label=params["cbar_label"], size=16, weight="bold")
