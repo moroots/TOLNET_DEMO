@@ -76,13 +76,14 @@ class filter_files:
             # print(processing_type_names)
             self.df = self.df[self.df["processing_type_name"].isin(processing_type_names)]
         except Exception as e:
-            # print(e)
+            print(e)
             pass
         return self
 
 class utilities:
     def __init__(self):
         self.data = {}
+        self.troubleshoot = {}
         return
     
     def O3_curtain_colors(self):
@@ -131,7 +132,7 @@ class utilities:
         return ncmap, nnorm
     
     
-    def curtain_plot(self, X, Y, Z, **kwargs):
+    def curtain_plot(self, X, Y, Z, use_countourf=False, **kwargs):
         
         params = {"ylabel": "Altitude (km AGL)",
                   "xlabel": "Datetime (UTC)",
@@ -139,20 +140,31 @@ class utilities:
                   "fontsize_ticks": 16,
                   "fontsize_title": 20,
                   "title": r"$O_3$ Mixing Ratio Profile",
-                  "savefig": None,
+                  "savefig": False,
+                  "savename": None,
                   "ylims": [0, 15],
                   "xlims": [X[0], X[-1]],
                   "yticks": np.arange(0, 15.1, 0.5),
                   "figsize": (15, 8),
                   "layout": "tight",
                   "cbar_label": 'Ozone ($ppb_v$)',
-                  "fontsize_cbar": 16
+                  "fontsize_cbar": 16,
+                  "grid": True,  # Add a parameter for grid
                   }
         
         params.update(kwargs)
         ncmap, nnorm = self.O3_curtain_colors()
         fig, ax = plt.subplots(1, 1, figsize=params["figsize"], layout=params["layout"])
-        im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
+        
+        if use_countourf:
+            # Plotting
+            ncmap, nnorm = data.O3_curtain_colors()
+            levels = nnorm.boundaries  # Use the same boundaries as for pcolormesh
+            im = ax.contourf(X, Y, Z, levels=levels, cmap=ncmap, norm=nnorm)
+            
+        else:
+            im = ax.pcolormesh(X, Y, Z, cmap=ncmap, norm=nnorm, shading="nearest")
+            
         cbar = fig.colorbar(im, ax=ax, pad=0.01, ticks=[0.001, *np.arange(10, 101, 10), 200, 300])
         cbar.set_label(label=params["cbar_label"], size=16, weight="bold")
         
@@ -178,8 +190,13 @@ class utilities:
         munits.registry[datetime.datetime] = converter
         ax.xaxis_date()
         
-        if params["savefig"]:
-            plt.savefig(params["savefig"], dpi=350)
+        if params["grid"]:
+            ax.grid(color=params.get("grid_color", 'gray'),
+                    linestyle=params.get("grid_linestyle", '--'),
+                    linewidth=params.get("grid_linewidth", 0.5))
+        
+        if params["savename"]:
+            plt.savefig(params["savename"], dpi=350)
             
         plt.show()
         
@@ -193,51 +210,60 @@ class GEOS_CF(utilities):
     def __init__(self, internal=True):
         super().__init__()
         if internal == False: 
-            self.base_url = "https://fluid.nccs.nasa.gov/cfapi"
+            self.base_url = r"https://dphttpdev01.nccs.nasa.gov/data-services"
         else: 
-            self.base_url = r"https://dphttpdev01.nccs.nasa.gov/data-services/"
+            self.base_url = r"https://fluid.nccs.nasa.gov/cfapi"
 
         self.data[("GEOS_CF", "Replay")] = {}
+        self.troubleshoot["GEOS_CF"] = []
         return
     
-    def _get_geos_data(self, collection, molecule, lat, lon, date_start, date_end):
-        ozone_query = f'{self.base_url}/{collection}/chm/v72/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
-        heights_query = f'{self.base_url}/{collection}/chm/v72/{molecule}/{lat}x{lon}/{date_start}/{date_end}'
+    def _get_geos_data(self, lat_lon, date_start, date_end, collection="assim", molecule="O3"):
+        ozone_query = f'{self.base_url}/{collection}/chm/v72/{molecule}/{lat_lon}/{date_start}/{date_end}'
+        heights_query = f'{self.base_url}/{collection}/met/v72/{molecule}/{lat_lon}/{date_start}/{date_end}'
+
         ozone_response = requests.get(ozone_query).json()
         met_response = requests.get(heights_query).json()
+        times = pd.to_datetime(ozone_response['time'], utc=True, format="%Y-%m-%dT%H:%M:%S")
+
         
-        ozone = pd.DataFrame(ozone_response['values']['O3'])
+        ozone = pd.DataFrame(ozone_response['values']['O3'], index=times)
         ozone.columns = pd.to_numeric(ozone.columns)
         ozone.sort_index(axis=1, inplace=True)
         
-        heights = pd.DataFrame(met_response['values']['ZL'])
+        heights = pd.DataFrame(met_response['values']['ZL'], index=times)
         heights.columns = pd.to_numeric(heights.columns)
         heights.sort_index(axis=1, inplace=True)
         
-        times = pd.to_datetime(ozone_response['time'], utc=True, format="%Y-%m-%dT%H:%M:%S")
-        times = np.tile(times, (72, 1))
-
-        self.data[("GEOS_CF", "Replay")][date_start] = {"height": heights,
-                                                        "ozone": ozone.to_numpy(),
-                                                        "time": times.T}
-        return self
-    
-    def get_geos_data_multithreaded(self, collection, molecule, lat, lon, start_date, end_date):
         
-        def fetch_geos_data_for_date(self, collection, molecule, lat, lon, date):
-            date_str = date.strftime('%Y-%m-%d')
-            return self._get_geos_data(collection, molecule, lat, lon, date_str, date_str)
+        times = np.tile(times, (72, 1))
+        data = {"height": heights, "ozone": ozone, "time": times.T}
+        
+        return (ozone_response, met_response), (date_start, date_end), data
+    
+    def get_geos_data_multithreaded(self, lat_lon, start_date, end_date):
+        
+        def fetch_geos_data_for_date(self, lat_lon, date):
+            date_str = date.strftime('%Y%m%d')
+            return self._get_geos_data(lat_lon, date_str, date_str)
         
         date_range = pd.date_range(start=start_date, end=end_date)
         
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(fetch_geos_data_for_date, self, collection, molecule, lat, lon, date) for date in date_range]
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(fetch_geos_data_for_date, self, lat_lon, date) for date in date_range]
             
-            for future in as_completed(futures):
+            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Downloading GEOS_CF Data for {lat_lon}"):
                 try:
-                    future.result()  # We can retrieve the result if needed or just ensure it completes without exceptions
+                    response, dates, data = future.result()  
+                    
+                    key = ("GEOS_CF", "Replay", f"{lat_lon}")
+                    if key not in self.data.keys(): 
+                        self.data[key] = {}
+                        
+                    self.data[("GEOS_CF", "Replay", f"{lat_lon}")][dates[0]] = data
+        
                 except Exception as e:
-                    print(f"Error fetching data for date: {e}")
+                    self.troubleshoot["GEOS_CF"].append(f"{e}")
     
         return self
     
@@ -251,6 +277,7 @@ class TOLNet(GEOS_CF):
         self.instrument_groups = self.get_instrument_groups()
         self.processing_types = self.get_processing_types()
         self.data = {}
+        self.troubleshoot["TOLNet"] = []
         return
     
     def print_product_types(self): 
@@ -410,7 +437,7 @@ class TOLNet(GEOS_CF):
             url = f"https://tolnet.larc.nasa.gov/api/data/json/{file_id}"
             response = requests.get(url).json()
         except:
-            print(f"Error with pulling {file_id}")
+            self.troubleshoot["TOLNet"].append(f"Error with pulling {file_id}")
         return response
     
     def _unpack_data(self, meta_data):
@@ -422,11 +449,15 @@ class TOLNet(GEOS_CF):
         Returns
         -------
         A DataFrame containing that same metadata
+        
         """
         df = pd.DataFrame(meta_data["value"]["data"], 
                           columns = meta_data["altitude"]["data"],
                           index = pd.to_datetime(meta_data["datetime"]["data"])
                           )
+        df = df.apply(pd.to_numeric)
+        df[df.isnull()] = np.nan
+        df.sort_index(inplace=True)
         return df
     
     def import_data(self, min_date, max_date, **kwargs):
@@ -439,8 +470,8 @@ class TOLNet(GEOS_CF):
             The ending date to take data from. Formatted as YYYY-MM-DD.
 
         """ 
-        
-        # print(f"Retrieving all {productquery} files from {date_start} to {date_end}:")
+        params = {"GEOS_CF": False}
+        params.update(kwargs)
         
         def process_file(file_name, file_id):
             meta_data = self._json_to_dict(file_id)
@@ -448,42 +479,46 @@ class TOLNet(GEOS_CF):
             data.index = self._add_timezone(data.index.to_list())
             return file_name, meta_data, data
         
-        self.files = self.get_files_list(min_date, max_date)
-        file_info = filter_files(self.files, self.processing_types).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).processing_type(**kwargs).df
-    
-        if file_info.size == self.files.size:
-            prompt = input("You are about to download ALL TOLNet JSON files available... Would you like to proceed? (yes | no)")
-            if prompt.lower() != "yes":
-                return
-    
-        self.data = {"dates": (min_date, max_date)}
+        files = self.get_files_list(min_date, max_date)
+        self.files = filter_files(files, self.processing_types).daterange(**kwargs).instrument_group(**kwargs).product_type(**kwargs).file_type(**kwargs).processing_type(**kwargs).df
+
+        self.request_dates = (min_date, max_date)
         self.meta_data = {}
         
         # Use ThreadPoolExecutor for multithreading
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             future_to_file = {
                 executor.submit(process_file, file_name, file_id): file_name
-                for file_name, file_id in zip(file_info["file_name"], file_info["id"])
+                for file_name, file_id in zip(self.files["file_name"], self.files["id"])
             }
     
-            for future in tqdm(as_completed(future_to_file), total=len(future_to_file)):
+            for future in tqdm(as_completed(future_to_file), total=len(future_to_file), desc="Downloading TOLNet Data for"):
                 file_name = future_to_file[future]
                 try:
                     file_name, meta_data, data = future.result()
-                     
+                    
+                    lat_lon = (str(meta_data["LATITUDE.INSTRUMENT"]) + "x" + str(meta_data["LONGITUDE.INSTRUMENT"]))
+                    date = meta_data["fileInfo"]["start_data_date"].split(" ")[0]
                     key = (meta_data["fileInfo"]["instrument_group_name"], 
-                           meta_data["fileInfo"]["processing_type_name"])
+                           meta_data["fileInfo"]["processing_type_name"],
+                           lat_lon)
                     
                     if key not in self.data.keys(): 
                         self.data[key] = {}
                         self.meta_data[key] = {}
                         
-                    self.data[key][file_name] = data
+                    self.data[key][date] = data
                     self.meta_data[key][file_name] = meta_data
 
                 except Exception as e:
-                    print(f"Error processing file {file_name}: {e}")
-    
+                    self.troubleshoot["TOLNet"].append(f"Error processing file {file_name}: {e}")
+        
+        if params["GEOS_CF"]:
+            keys = list(self.data.keys())
+            for key in keys:
+                lat_lon = key[2]
+                self.get_geos_data_multithreaded(lat_lon, self.request_dates[0], self.request_dates[1])
+                
         return self
 
     def tolnet_curtains(self, **kwargs):
@@ -502,50 +537,67 @@ class TOLNet(GEOS_CF):
 
         """
         
-        inst_grp_names = self.instrument_groups["instrument_group_name"].to_list()
-        
-        group_names = np.array(list(self.meta_data.keys()))[:,0]
-        group_names = np.unique(group_names)
-        
         ncmap, nnorm = self.O3_curtain_colors()
         for key in self.data.keys():
-        
-            if key in ["dates", ("GEOS_CF", "Replay")]:
-                continue
             
-            df = []
-            # fig, ax = plt.subplots(1, 1, figsize=(15, 8), layout="tight")
-            for filename in self.data[key].keys():
-                self.data[key][filename] = self.data[key][filename].fillna(value=np.nan)
-                
-                df.append(self.data[key][filename])
-                
-            lim = self.data['dates']
+            lim = self.request_dates
             xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-    
-            title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]} \n {str(xlims[0])} - {str(xlims[1])}"
-    
-            plotname = f"{key[0]}_{key[1]}_{str(xlims[0])}_{str(xlims[-1])}.png"
-            savefig = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
+        
+            title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]}, [{key[2]}] \n {str(xlims[0])} - {str(xlims[1])}"
             
-            params = {"title": title, "savefig": savefig, "xlims": xlims}
+            plotname = f"{key[0]}_{key[1]}_{key[2]}_{str(xlims[0])}_{str(xlims[-1])}.png"
+            savename = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
+            
+            params = {"title": title, "savefig": False, "savename": savename, "xlims": xlims}
+            
+            
+        
+            if "GEOS_CF" not in key[0]:
+                df = []
+                for filename in self.data[key].keys():
+                    
+                    df.append(self.data[key][filename])
+                
+                df = pd.concat(df); df.sort_index(inplace=True)
+                timedelta = min([(df.index[i] - df.index[i-1]).seconds for i in range(1, len(df))])
+                df = df.resample(f"{timedelta}s").mean()
+                
+                X, Y, Z = (df.index, df.columns, df.to_numpy().T,)
+                
+            else: 
+                T = []
+                h = []
+                o = []
+                for date in self.data[key]:
+                    t = self.data[key][date]["time"]
+                    h.append(self.data[key][date]["height"])
+                    o.append(self.data[key][date]["ozone"])
+                    T.append(pd.DataFrame(t))
+                    
+                time = pd.concat(T).set_index([0], drop=False).sort_index()
+                ozone = pd.concat(o).sort_index()
+                height = pd.concat(h).sort_index()
+                
+                X = time.values
+                Y = height.sort_index(axis=1, ascending=False).values / 1000
+                Z = ozone.sort_index(axis=1, ascending=False).values
+                params["use_countourf"] = True
+            
             params.update(kwargs)
-            
-            df = pd.concat(df); df.sort_index(inplace=True)
-            
-            X, Y, Z = (df.index, df.columns, df.to_numpy().T,)
-            
             self.curtain_plot(X, Y, Z, **params)
-
+                
         return self
 
 
 #%% Example
-date_start = "2023-08-08"
-date_end = "2023-08-11"
-product_IDs = [4]
 
 if __name__ == "__main__":
+    
+    date_start = "2023-08-08"
+    date_end = "2023-08-11"
+    product_IDs = [4]
+
+
     tolnet = TOLNet()
     print("Created TOLNET instance")
     
@@ -554,7 +606,129 @@ if __name__ == "__main__":
     tolnet.print_instrument_groups()
     tolnet.print_file_types()
     
-    data = tolnet.import_data(min_date=date_start, max_date=date_end, product_type=product_IDs)
+    data = tolnet.import_data(min_date=date_start, max_date=date_end, product_type=product_IDs, GEOS_CF=True)
+    
+    #%% 
+    
     data.tolnet_curtains()
 
 #%% 
+
+
+for key in data.data.keys():
+    
+    lim = data.request_dates
+    xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
+
+    title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]}, [{key[2]}] \n {str(xlims[0])} - {str(xlims[1])}"
+    
+    plotname = f"{key[0]}_{key[1]}_{key[2]}_{str(xlims[0])}_{str(xlims[-1])}.png"
+    savename = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
+    
+    params = {"title": title, "savefig": False, "savename": savename, "xlims": xlims}
+    # params.update(kwargs)
+    
+
+    if "GEOS_CF" not in key[0]:
+        df = []
+        for filename in data.data[key].keys():
+            
+            df.append(data.data[key][filename])
+        
+        df = pd.concat(df); df.sort_index(inplace=True)
+        timedelta = min([(df.index[i] - df.index[i-1]).seconds for i in range(1, len(df))])
+        df = df.resample(f"{timedelta}s").mean()
+        
+        X, Y, Z = (df.index, df.columns, df.to_numpy().T,)
+        
+    else: 
+        T = []
+        h = []
+        o = []
+        for date in data.data[key]:
+            t = data.data[key][date]["time"]
+            h.append(data.data[key][date]["height"])
+            o.append(data.data[key][date]["ozone"])
+            T.append(pd.DataFrame(t))
+            
+        time = pd.concat(T).set_index([0], drop=False).sort_index()
+        ozone = pd.concat(o).sort_index()
+        height = pd.concat(h).sort_index()
+        
+        X = time.values
+        Y = height.sort_index(axis=1, ascending=False).values / 1000
+        Z = ozone.sort_index(axis=1, ascending=False).values
+        
+        # Plotting
+        ncmap, nnorm = data.O3_curtain_colors()
+
+        levels = nnorm.boundaries  # Use the same boundaries as for pcolormesh
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        im = ax.contourf(X, Y, Z, levels=levels, cmap=ncmap, norm=nnorm)
+        plt.colorbar(im, ax=ax)
+        plt.xlabel('Time')
+        plt.ylabel('Height (km)')
+        plt.title(params["title"])
+        plt.xlim(params["xlims"])
+        plt.ylim([0, 15])
+        plt.show()
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
