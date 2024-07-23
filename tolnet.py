@@ -75,8 +75,7 @@ class filter_files:
                     list(types["processing_type_name"][types["id"] == process])[0])
             # print(processing_type_names)
             self.df = self.df[self.df["processing_type_name"].isin(processing_type_names)]
-        except Exception as e:
-            print(e)
+        except:
             pass
         return self
 
@@ -158,7 +157,7 @@ class utilities:
         
         if use_countourf:
             # Plotting
-            ncmap, nnorm = data.O3_curtain_colors()
+            ncmap, nnorm = self.O3_curtain_colors()
             levels = nnorm.boundaries  # Use the same boundaries as for pcolormesh
             im = ax.contourf(X, Y, Z, levels=levels, cmap=ncmap, norm=nnorm)
             
@@ -201,8 +200,6 @@ class utilities:
         plt.show()
         
         return
-    
-    
     
 class GEOS_CF(utilities):
     # https://dphttpdev01.nccs.nasa.gov/data-services/cfapi/assim/chm/v72/O3/39x-77/20230808/20230811
@@ -578,7 +575,7 @@ class TOLNet(GEOS_CF):
                 ozone = pd.concat(o).sort_index()
                 height = pd.concat(h).sort_index()
                 
-                X = time.values
+                X = time.sort_index(axis=1, ascending=False).values
                 Y = height.sort_index(axis=1, ascending=False).values / 1000
                 Z = ozone.sort_index(axis=1, ascending=False).values
                 params["use_countourf"] = True
@@ -614,67 +611,6 @@ if __name__ == "__main__":
 
 #%% 
 
-
-for key in data.data.keys():
-    
-    lim = data.request_dates
-    xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-
-    title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]}, [{key[2]}] \n {str(xlims[0])} - {str(xlims[1])}"
-    
-    plotname = f"{key[0]}_{key[1]}_{key[2]}_{str(xlims[0])}_{str(xlims[-1])}.png"
-    savename = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
-    
-    params = {"title": title, "savefig": False, "savename": savename, "xlims": xlims}
-    # params.update(kwargs)
-    
-
-    if "GEOS_CF" not in key[0]:
-        df = []
-        for filename in data.data[key].keys():
-            
-            df.append(data.data[key][filename])
-        
-        df = pd.concat(df); df.sort_index(inplace=True)
-        timedelta = min([(df.index[i] - df.index[i-1]).seconds for i in range(1, len(df))])
-        df = df.resample(f"{timedelta}s").mean()
-        
-        X, Y, Z = (df.index, df.columns, df.to_numpy().T,)
-        
-    else: 
-        T = []
-        h = []
-        o = []
-        for date in data.data[key]:
-            t = data.data[key][date]["time"]
-            h.append(data.data[key][date]["height"])
-            o.append(data.data[key][date]["ozone"])
-            T.append(pd.DataFrame(t))
-            
-        time = pd.concat(T).set_index([0], drop=False).sort_index()
-        ozone = pd.concat(o).sort_index()
-        height = pd.concat(h).sort_index()
-        
-        X = time.values
-        Y = height.sort_index(axis=1, ascending=False).values / 1000
-        Z = ozone.sort_index(axis=1, ascending=False).values
-        
-        # Plotting
-        ncmap, nnorm = data.O3_curtain_colors()
-
-        levels = nnorm.boundaries  # Use the same boundaries as for pcolormesh
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        im = ax.contourf(X, Y, Z, levels=levels, cmap=ncmap, norm=nnorm)
-        plt.colorbar(im, ax=ax)
-        plt.xlabel('Time')
-        plt.ylabel('Height (km)')
-        plt.title(params["title"])
-        plt.xlim(params["xlims"])
-        plt.ylim([0, 15])
-        plt.show()
-
-        
         
         
         
