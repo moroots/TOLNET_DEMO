@@ -540,7 +540,10 @@ class TOLNet(GEOS_CF):
             lim = self.request_dates
             xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
         
-            title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]}, [{key[2]}] \n {str(xlims[0])} - {str(xlims[1])}"
+            first_file = list(self.meta_data[key])[0]
+            location = self.meta_data[key][first_file]['attributes']['DATA_LOCATION'].replace(".", ", ")
+        
+            title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]}, {location} \n {str(xlims[0])} - {str(xlims[1])}"
             
             plotname = f"{key[0]}_{key[1]}_{key[2]}_{str(xlims[0])}_{str(xlims[-1])}.png"
             savename = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
