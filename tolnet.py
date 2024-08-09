@@ -133,7 +133,7 @@ class utilities:
     
     def curtain_plot(self, X, Y, Z, use_countourf=False, **kwargs):
         
-        params = {"ylabel": "Altitude (km AGL)",
+        params = {"ylabel": "Altitude (km ASL)",
                   "xlabel": "Datetime (UTC)",
                   "fontsize_label": 18,
                   "fontsize_ticks": 16,
@@ -515,7 +515,7 @@ class TOLNet(GEOS_CF):
             for key in keys:
                 lat_lon = key[2]
                 self.get_geos_data_multithreaded(lat_lon, self.request_dates[0], self.request_dates[1])
-                
+            
         return self
 
     def tolnet_curtains(self, **kwargs):
@@ -539,11 +539,14 @@ class TOLNet(GEOS_CF):
             
             lim = self.request_dates
             xlims = [np.datetime64(lim[0]), np.datetime64(lim[-1])]
-        
-            first_file = list(self.meta_data[key])[0]
-            location = self.meta_data[key][first_file]['attributes']['DATA_LOCATION'].replace(".", ", ")
-        
-            title = f"$O_3$ Mixing Ratio Profile ($ppb_v$) - {key[0]}, {key[1]}, {location} \n {str(xlims[0])} - {str(xlims[1])}"
+            
+            if key[0] == "GEOS_CF":
+                location = "GEOS-CF data"
+            else:
+                first_file = list(self.meta_data[key])[0]
+                location = self.meta_data[key][first_file]['attributes']['DATA_LOCATION'].replace(".", ", ")
+                
+            title = f"{location} ({key[0]} / {key[1]}) \n {str(xlims[0])} - {str(xlims[1])}"
             
             plotname = f"{key[0]}_{key[1]}_{key[2]}_{str(xlims[0])}_{str(xlims[-1])}.png"
             savename = plotname.replace(' ', '_').replace('-', '_').replace('\\', '').replace('/', '')
